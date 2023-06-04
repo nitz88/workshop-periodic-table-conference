@@ -4,6 +4,7 @@ export default {
 };
 
 var elements;
+var symbols = {};
 
 await loadPeriodicTable();
 
@@ -11,48 +12,59 @@ await loadPeriodicTable();
 
 async function loadPeriodicTable() {
   elements = await (await fetch("periodic-table.json")).json();
+  for (let element of elements) {
+    symbols[element.symbol.toLowerCase()] = element;
+  }
 }
 
-function check(inputWord) {
-  // TODO: determine if `inputWord` can be spelled
-  // with periodic table symbols; return array with
-  // them if so (empty array otherwise)
+function findCandidates(inputWord) {
+  let oneLetterSymbols = new Set();
+  let twoLetterSymbols = new Set();
 
-  if (inputWord.length > 0) {
-    for (let element of elements) {
-      let symbol = element.symbol.toLowerCase();
-      if (symbol.length <= inputWord.length) {
-        // same thing we can write below ways as well
-        // if (inputWord.startsWith(symbol)
-        if (inputWord.slice(0, symbol.length) == symbol) {
-          if (inputWord.length > symbol.length) {
-            let res = check(inputWord.slice(symbol.length));
+  for (let i = 0; i < inputWord.length; i++) {
+    if (inputWord[i] in symbols) {
+      oneLetterSymbols.add(inputWord[i]);
+    }
 
-            if (res.length > 0) {
-              return [symbol, ...res];
-            }
-          } else {
-            // we are at the end of symbol
-            return [symbol];
+    if (i <= inputWord.length - 2) {
+      let two = inputWord.slice(i, i + 2);
+      if (two in symbols) {
+        twoLetterSymbols.add(two);
+      }
+    }
+  }
+
+  return [...twoLetterSymbols, ...oneLetterSymbols];
+}
+
+function spellWord(candidates, charsLeft) {
+  if (charsLeft.length === 0) {
+    return [];
+  } else {
+    for (let candidate of candidates) {
+      let chunk = charsLeft.slice(0, candidate.length);
+      if (candidate == chunk) {
+        if (charsLeft.length > chunk.length) {
+          let rest = charsLeft.slice(chunk.length);
+          let res = spellWord(candidates, rest);
+          if (res.length > 0) {
+            return [candidate, ...res];
           }
+        } else {
+          return [candidate];
         }
       }
     }
   }
 
   return [];
-  // return ["be", "ca", "u", "se"];
+}
+
+function check(inputWord) {
+  var candidates = findCandidates(inputWord);
+  return spellWord(candidates, inputWord);
 }
 
 function lookup(elementSymbol) {
-  // TODO: return the element entry based on specified
-  // symbol (case-insensitive)
-
-  // simplest way
-  for (let element of elements) {
-    if (element.symbol.toLowerCase() == elementSymbol) {
-      return element;
-    }
-  }
-  //   return {};
+  return symbols[elementSymbol];
 }
